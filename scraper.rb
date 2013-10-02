@@ -1,8 +1,10 @@
 require 'rubygems'
 require 'nokogiri'
 require 'open-uri'
+require_relative 'feed'
 require_relative 'hiragana'
 require_relative 'katakana'
+require_relative 'link'
 
 # Online development
 # sample = "http://headlines.yahoo.co.jp/hl?a=20130929-00000106-economic-bus_all"
@@ -18,21 +20,23 @@ class Scraper
   attr_accessor :text
   attr_reader :length
   attr_reader :kanji_hash
+  attr_accessor :link
 
-  def initialize(url)
+  def initialize(link)
 
-    @url = url
+    @link = link
+    @url = @link.url
     @kanji_hash = {}
 
     # Offline
     @page = Nokogiri::HTML(open(@url))
-
     # Online
     # @page = Nokogiri::HTML(open(@url).read)
-
+    
   end
 
   # Get the article text from the URL
+
   def get_text
 
     # Get the text of the article from <p> tag of class="ynDetailText"
@@ -45,27 +49,17 @@ class Scraper
 
     # Cycle through all characters in the string and add them to the hash if they are kanji
     @text.each_char do |char|
-
       # Check if the character in the article is a kanji
       if is_kanji?(char)
-
         # Add character to hash or increase the kanji count for an existing entry
         unless @kanji_hash[char]
-
           @kanji_hash[char] = 1
-
         else
-
           @kanji_hash[char] += 1
-
         end
-
       else
-
         next
-
       end
-
     end
 
   end
@@ -76,16 +70,12 @@ class Scraper
 
     # Check if character is a non-word character (.,=- etc.)
     if !is_a_word_char?(char) ; kanji = false ; end
-
     # Check if character is romaji (abcdefg etc.)
     if is_romaji?(char) ; kanji = false ; end
-
     # Check if the character is a hiragana
     if is_hiragana?(char) ; kanji = false ; end
-
     # Check if the character is a katakana
     if is_katakana?(char) ; kanji = false ; end
-
     # Check if the character is a number
     if is_number?(char) ; kanji = false ; end
 
@@ -134,6 +124,19 @@ class Scraper
 
 end
 
+url = "http://headlines.yahoo.co.jp/rss/all-dom.xml"
+yahoo_domestic = Feed.new(url)
+
+links = []
+yahoo_domestic.feed.entries.each do |entry|
+  source = yahoo_domestic.title
+  link = Link.new(entry, source)
+  links << link
+end
+
+puts links.inspect
+
+=begin
 
 scraper = Scraper.new(sample)
 
@@ -147,3 +150,4 @@ puts "Kanji hash: \n"
 
 p scraper.kanji_hash
 
+=end
